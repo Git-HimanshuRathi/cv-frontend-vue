@@ -26,6 +26,7 @@ jobs:
         runs-on: ubuntu-latest
         outputs:
             new_version: ${{ steps.bump.outputs.new_version }}
+            changelog: ${{ steps.changelog.outputs.clean_changelog }}
         steps:
             - name: Checkout repository
               uses: actions/checkout@v4
@@ -92,6 +93,20 @@ jobs:
                   sed -i "s/^version = \".*\"/version = \"$VERSION_NO_V\"/" src-tauri/Cargo.toml
 
                   echo "Updated version files to $VERSION_NO_V"
+
+            - name: Generate Changelog
+              id: changelog
+              uses: TriPSs/conventional-changelog-action@v3
+              with:
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
+                  skip-on-empty: 'false'
+                  skip-commit: 'true'
+                  skip-version-file: 'true'
+                  skip-git-pull: 'true'
+                  git-push: 'false'
+                  output-file: 'false'
+                  release-count: 0
+                  tag-prefix: 'v'
 
             - name: Commit Version Bump
               run: |
@@ -196,19 +211,6 @@ jobs:
                   git config user.name "github-actions[bot]"
                   git config user.email "github-actions[bot]@users.noreply.github.com"
 
-            - name: Generate Changelog
-              id: changelog
-              uses: TriPSs/conventional-changelog-action@v3
-              with:
-                  github-token: ${{ secrets.GITHUB_TOKEN }}
-                  skip-on-empty: 'false'
-                  skip-commit: 'true'
-                  skip-version-file: 'true'
-                  skip-git-pull: 'true'
-                  git-push: 'false'
-                  output-file: 'false'
-                  release-count: 0
-
             - name: Update Repository Changelog
               run: |
                   set -euo pipefail
@@ -216,7 +218,7 @@ jobs:
                   TEMP_CHANGELOG="$(mktemp)"
 
                   cat <<'EOF' > "$TEMP_CHANGELOG"
-                  ${{ steps.changelog.outputs.changelog }}
+                  ${{ needs.version.outputs.changelog }}
                   EOF
 
                   if [ -f "$CHANGELOG_FILE" ]; then
@@ -285,7 +287,7 @@ jobs:
                   echo "Creating release: $NEW_VERSION"
 
                   CHANGELOG_NOTES_FILE="RELEASE_NOTES.md"
-                  echo '${{ steps.changelog.outputs.changelog }}' > "$CHANGELOG_NOTES_FILE"
+                  echo '${{ needs.version.outputs.changelog }}' > "$CHANGELOG_NOTES_FILE"
 
                   gh release create "$NEW_VERSION" \
                     --title "CircuitVerse Desktop $NEW_VERSION" \
