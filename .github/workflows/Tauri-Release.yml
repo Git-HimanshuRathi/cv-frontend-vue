@@ -103,6 +103,7 @@ jobs:
                   skip-commit: 'true'
                   skip-version-file: 'true'
                   skip-git-pull: 'true'
+                  skip-tag: 'true'
                   git-push: 'false'
                   output-file: 'false'
                   release-count: 0
